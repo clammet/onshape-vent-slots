@@ -20,6 +20,9 @@ rounded ventilation slots into a planar face.
 - **Offset from edges** — erodes the input region and expands keep-outs by this
   amount. This guarantees at least the requested clearance at both slot ends;
   it also maintains the clearance along every other boundary.
+- **Exclude slots smaller than** — removes final slot fragments shorter than the
+  specified length after clipping and keep-outs are applied. Defaults to `0.5 mm`;
+  set it to `0 mm` to keep every fragment.
 - **Cut depth** — blind cut depth. Enable **Flip depth direction** if the chosen
   face is oriented the other way.
 
@@ -32,8 +35,8 @@ and reports a focused regeneration error if the input later becomes invalid.
 
 1. In an Onshape document, create a **Feature Studio** tab.
 2. Replace its contents with [`vent-slots.fs`](vent-slots.fs).
-3. If the new Feature Studio template has a newer FeatureScript version than
-   `3044`, update both version numbers on the first two lines to match it.
+3. If the new Feature Studio template has a newer FeatureScript version, update
+   both version numbers on the first two lines to match it.
 4. Commit the Feature Studio, open a Part Studio, and add **Vent slots** from
    **Custom features in this workspace**.
 

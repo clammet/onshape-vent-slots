@@ -7,6 +7,7 @@ const SLOT_GAP_BOUNDS = { (millimeter) : [0, 3, 1000] } as LengthBoundSpec;
 const SEGMENT_COUNT_BOUNDS = { (unitless) : [0, 0, 100] } as IntegerBoundSpec;
 const SEGMENT_GAP_BOUNDS = { (millimeter) : [0, 2, 1000] } as LengthBoundSpec;
 const EDGE_OFFSET_BOUNDS = { (millimeter) : [0, 2, 1000] } as LengthBoundSpec;
+const MIN_SLOT_LENGTH_BOUNDS = { (millimeter) : [0, 0.5, 1000] } as LengthBoundSpec;
 const CUT_DEPTH_BOUNDS = { (millimeter) : [0.01, 3, 1000] } as LengthBoundSpec;
 const SLOT_ANGLE_BOUNDS = { (degree) : [-360, 0, 360] } as AngleBoundSpec;
 
@@ -129,6 +130,9 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
 
         annotation { "Name" : "Offset from edges" }
         isLength(definition.edgeOffset, EDGE_OFFSET_BOUNDS);
+
+        annotation { "Name" : "Exclude slots smaller than" }
+        isLength(definition.minimumSlotLength, MIN_SLOT_LENGTH_BOUNDS);
 
         annotation { "Name" : "Cut depth" }
         isLength(definition.depth, CUT_DEPTH_BOUNDS);
@@ -377,10 +381,33 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
             }
         }
 
+        // Clipping and keep-outs can leave short fragments. Measure each final
+        // tool body along the slot direction and discard fragments below the
+        // requested minimum before cutting the target part.
+        if (definition.minimumSlotLength > 0 * meter)
+        {
+            forEachEntity(context, id + "excludeSmallSlots", slotBodies,
+                    function(slotBody is Query, bodyId is Id)
+                {
+                    const slotBox = evBox3d(context, {
+                                "topology" : slotBody,
+                                "cSys" : slotCSys,
+                                "tight" : true
+                            });
+                    const slotLength = slotBox.maxCorner[0] - slotBox.minCorner[0];
+                    if (slotLength < definition.minimumSlotLength)
+                    {
+                        opDeleteBodies(context, bodyId + "delete", {
+                                    "entities" : slotBody
+                                });
+                    }
+                });
+        }
+
         if (size(evaluateQuery(context, slotBodies)) == 0)
         {
-            throw regenError("No slot geometry remains inside the bounds. Reduce the offsets or change the spacing.", {
-                        "faultyParameters" : ["ventRegion", "bounds", "edgeOffset"]
+            throw regenError("No slot geometry remains after applying the bounds and minimum slot size.", {
+                        "faultyParameters" : ["ventRegion", "bounds", "edgeOffset", "minimumSlotLength"]
                     });
         }
 
