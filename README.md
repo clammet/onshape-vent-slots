@@ -5,6 +5,8 @@
 `vent-slots.fs` defines an Onshape custom feature that cuts angled rows of
 rounded ventilation slots into a planar face.
 
+<img width="2206" height="999" alt="image" src="https://github.com/user-attachments/assets/da562269-7b08-429f-8f03-2acb34b09355" />
+
 ## Inputs
 
 - **Input sketch region** — select one shaded region from a closed sketch. The
