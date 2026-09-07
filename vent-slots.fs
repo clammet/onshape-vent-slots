@@ -1,5 +1,6 @@
-FeatureScript 3044;
-import(path : "onshape/std/geometry.fs", version : "3044.0");
+FeatureScript 3070;
+import(path : "onshape/std/common.fs", version : "3070.0");
+import(path : "onshape/std/geometry.fs", version : "3070.0");
 
 const SLOT_WIDTH_BOUNDS = { (millimeter) : [0.1, 3, 1000] } as LengthBoundSpec;
 const SLOT_GAP_BOUNDS = { (millimeter) : [0, 3, 1000] } as LengthBoundSpec;
