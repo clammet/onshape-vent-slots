@@ -9,12 +9,13 @@ rounded ventilation slots into a planar face.
 
 ## Inputs
 
+- **Target surface** — one planar face on the solid part to cut. This is the
+  first input and receives focus when creating or editing the feature.
 - **Input sketch region (optional)** — select one shaded region from a closed
   sketch, or leave empty to use the target face's boundary, including any holes.
   The sketch may be coincident with the target face or on any parallel plane.
 - **Bounds / keep-outs** — optional shaded, closed sketch regions that the
   slots must not enter. These regions must also be parallel to the target.
-- **Target surface** — one planar face on the solid part to cut.
 - **Slot angle** — measured from the input sketch's X axis when selected,
   otherwise from the target face's local X axis.
 - **Slot width** and **Gap between slots** — control the row pitch.

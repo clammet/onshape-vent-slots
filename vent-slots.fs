@@ -94,6 +94,14 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
     precondition
     {
         annotation {
+            "Name" : "Target surface",
+            "Filter" : EntityType.FACE && GeometryType.PLANE && BodyType.SOLID,
+            "MaxNumberOfPicks" : 1,
+            "UIHint" : UIHint.INITIAL_FOCUS
+        }
+        definition.targetSurface is Query;
+
+        annotation {
             "Name" : "Input sketch region (optional)",
             "Filter" : EntityType.FACE && SketchObject.YES,
             "MaxNumberOfPicks" : 1
@@ -105,13 +113,6 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
             "Filter" : EntityType.FACE && SketchObject.YES
         }
         definition.bounds is Query;
-
-        annotation {
-            "Name" : "Target surface",
-            "Filter" : EntityType.FACE && GeometryType.PLANE && BodyType.SOLID,
-            "MaxNumberOfPicks" : 1
-        }
-        definition.targetSurface is Query;
 
         annotation { "Name" : "Slot angle" }
         isAngle(definition.slotAngle, SLOT_ANGLE_BOUNDS);
