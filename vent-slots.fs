@@ -88,13 +88,13 @@ function requireParallelSketchPlane(context is Context, query is Query,
 
 annotation {
     "Feature Type Name" : "Vent slots",
-    "Feature Type Description" : "Cut an angled array of optionally segmented slots inside a closed sketch region."
+    "Feature Type Description" : "Cut an angled array of optionally segmented slots inside a closed sketch region, or the target face when no region is selected."
 }
 export const ventSlots = defineFeature(function(context is Context, id is Id, definition is map)
     precondition
     {
         annotation {
-            "Name" : "Input sketch region",
+            "Name" : "Input sketch region (optional)",
             "Filter" : EntityType.FACE && SketchObject.YES,
             "MaxNumberOfPicks" : 1
         }
@@ -141,8 +141,6 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         definition.flipDepth is boolean;
     }
     {
-        const ventRegion = requireOne(context, definition.ventRegion, "ventRegion",
-                "Select exactly one shaded, closed sketch region.");
         const targetSurface = requireOne(context, definition.targetSurface, "targetSurface",
                 "Select exactly one planar target face.");
 
@@ -161,8 +159,19 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
                     "face" : targetSurface,
                     "parameter" : vector(0.5, 0.5)
                 });
-        const regionPlane = requireParallelSketchPlane(context, ventRegion, targetPlane,
-                "ventRegion");
+        // With no sketch selected, use the actual target face as the envelope,
+        // preserving its outer boundary and any inner loops (holes).
+        var ventRegion = targetSurface;
+        var regionPlane = targetPlane;
+        var regionParameter = "targetSurface";
+        if (!isQueryEmpty(context, definition.ventRegion))
+        {
+            ventRegion = requireOne(context, definition.ventRegion, "ventRegion",
+                    "Select one shaded, closed sketch region, or leave it empty to use the target face.");
+            regionPlane = requireParallelSketchPlane(context, ventRegion, targetPlane,
+                    "ventRegion");
+            regionParameter = "ventRegion";
+        }
 
         const boundsEntities = evaluateQuery(context, definition.bounds);
         var boundsPlane;
@@ -178,8 +187,8 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
             cutDirection = targetPlane.normal;
         }
 
-        // Angle zero follows the input sketch X axis, which keeps the result stable
-        // when the model is moved or the target face has a different canonical axis.
+        // Angle zero follows the input sketch X axis when supplied, otherwise
+        // the target face's local X axis.
         const slotX = rotationMatrix3d(regionPlane.normal, definition.slotAngle) * regionPlane.x;
         const slotPlane = plane(targetPlane.origin, targetPlane.normal, slotX);
         const slotCSys = coordSystem(slotPlane);
@@ -200,7 +209,7 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         {
             throw regenError("The vent region is narrower than one slot.", {
                         "faultyParameters" : ["slotWidth"],
-                        "entities" : definition.ventRegion
+                        "entities" : ventRegion
                     });
         }
 
@@ -224,7 +233,7 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         }
 
         // Extend the pattern past the region. The later boolean clip produces exact
-        // endpoints even for curved or concave sketch boundaries.
+        // endpoints even for curved or concave region boundaries.
         const xMargin = definition.slotWidth + pitch;
         const patternLeft = minX - xMargin;
         const patternRight = maxX + xMargin;
@@ -275,8 +284,8 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
                 });
         const slotBodies = qCreatedBy(slotExtrudeId, EntityType.BODY);
 
-        // Make the closed input region into a long prism. It can live on any plane
-        // parallel to the target face; it does not have to be coincident with it.
+        // Make the selected sketch region or target face into a long prism.
+        // A sketch can lie on any plane parallel to the target face.
         const targetBox = evBox3d(context, { "topology" : targetBody, "tight" : false });
         var maximumPlaneDistance = abs(dot(regionPlane.origin - targetPlane.origin,
                         targetPlane.normal));
@@ -313,9 +322,9 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
             }
             catch
             {
-                throw regenError("The edge offset is too large for the input sketch region.", {
+                throw regenError("The edge offset is too large for the vent region.", {
                             "faultyParameters" : ["edgeOffset"],
-                            "entities" : definition.ventRegion
+                            "entities" : ventRegion
                         });
             }
         }
@@ -407,7 +416,7 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         if (size(evaluateQuery(context, slotBodies)) == 0)
         {
             throw regenError("No slot geometry remains after applying the bounds and minimum slot size.", {
-                        "faultyParameters" : ["ventRegion", "bounds", "edgeOffset", "minimumSlotLength"]
+                        "faultyParameters" : [regionParameter, "bounds", "edgeOffset", "minimumSlotLength"]
                     });
         }
 
