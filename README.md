@@ -22,10 +22,12 @@ rounded ventilation slots into a planar face.
 - **Segments per slot** — `0` or `1` makes each row continuous; `2` or more
   splits each row into that many pieces.
 - **Gap between segments** — clear distance between adjacent pieces.
-- **Offset from edges** — erodes the sketch region (or target face boundary when
-  no sketch is selected) and expands keep-outs by this
-  amount. This guarantees at least the requested clearance at both slot ends;
-  it also maintains the clearance along every other boundary.
+- **Offset from edges** — erodes only the input sketch region (or target face
+  boundary when no sketch is selected), maintaining the requested clearance
+  along its outer boundary and any holes. Defaults to `2 mm`.
+- **Offset from keep-out** — expands the selected **Bounds / keep-outs** by this
+  amount, independently of the edge offset. Defaults to `2 mm`; set it to `0 mm`
+  to clip directly at the keep-out boundaries.
 - **Exclude slots smaller than** — removes final slot fragments shorter than the
   specified length after clipping and keep-outs are applied. Defaults to `0.5 mm`;
   set it to `0 mm` to keep every fragment.
@@ -61,7 +63,8 @@ selected region.
   usable area; the feature reports this instead of silently making invalid cuts.
 - Keep-out regions are optional. Holes already present inside the input sketch
   region, or the target face when no sketch is selected, are naturally treated
-  as bounds and receive the same clearance.
+  as region boundaries and receive **Offset from edges** clearance. Explicitly
+  selected **Bounds / keep-outs** receive **Offset from keep-out** clearance.
 
 The implementation uses Onshape's documented sketch, extrusion, face-offset,
 and boolean operations. See the official [FeatureScript standard library

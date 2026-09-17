@@ -7,6 +7,7 @@ const SLOT_GAP_BOUNDS = { (millimeter) : [0, 3, 1000] } as LengthBoundSpec;
 const SEGMENT_COUNT_BOUNDS = { (unitless) : [0, 0, 100] } as IntegerBoundSpec;
 const SEGMENT_GAP_BOUNDS = { (millimeter) : [0, 2, 1000] } as LengthBoundSpec;
 const EDGE_OFFSET_BOUNDS = { (millimeter) : [0, 2, 1000] } as LengthBoundSpec;
+const KEEP_OUT_OFFSET_BOUNDS = { (millimeter) : [0, 2, 1000] } as LengthBoundSpec;
 const MIN_SLOT_LENGTH_BOUNDS = { (millimeter) : [0, 0.5, 1000] } as LengthBoundSpec;
 const CUT_DEPTH_BOUNDS = { (millimeter) : [0.01, 3, 1000] } as LengthBoundSpec;
 const SLOT_ANGLE_BOUNDS = { (degree) : [-360, 0, 360] } as AngleBoundSpec;
@@ -131,6 +132,9 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
 
         annotation { "Name" : "Offset from edges" }
         isLength(definition.edgeOffset, EDGE_OFFSET_BOUNDS);
+
+        annotation { "Name" : "Offset from keep-out" }
+        isLength(definition.keepOutOffset, KEEP_OUT_OFFSET_BOUNDS);
 
         annotation { "Name" : "Exclude slots smaller than" }
         isLength(definition.minimumSlotLength, MIN_SLOT_LENGTH_BOUNDS);
@@ -353,19 +357,19 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
                     });
             const boundBodies = qCreatedBy(boundsExtrudeId, EntityType.BODY);
 
-            if (definition.edgeOffset > 0 * meter)
+            if (definition.keepOutOffset > 0 * meter)
             {
                 try
                 {
                     opOffsetFace(context, id + "expandKeepouts", {
                                 "moveFaces" : qNonCapEntity(boundsExtrudeId, EntityType.FACE),
-                                "offsetDistance" : definition.edgeOffset
+                                "offsetDistance" : definition.keepOutOffset
                             });
                 }
                 catch
                 {
-                    throw regenError("The edge offset could not be applied to the selected bounds.", {
-                                "faultyParameters" : ["edgeOffset", "bounds"],
+                    throw regenError("The keep-out offset could not be applied to the selected bounds.", {
+                                "faultyParameters" : ["keepOutOffset", "bounds"],
                                 "entities" : definition.bounds
                             });
                 }
@@ -417,7 +421,7 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         if (size(evaluateQuery(context, slotBodies)) == 0)
         {
             throw regenError("No slot geometry remains after applying the bounds and minimum slot size.", {
-                        "faultyParameters" : [regionParameter, "bounds", "edgeOffset", "minimumSlotLength"]
+                        "faultyParameters" : [regionParameter, "bounds", "edgeOffset", "keepOutOffset", "minimumSlotLength"]
                     });
         }
 
