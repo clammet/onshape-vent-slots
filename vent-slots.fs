@@ -87,6 +87,54 @@ function requireParallelSketchPlane(context is Context, query is Query,
     return sketchPlane;
 }
 
+/**
+ * Remove a clearance band from the envelope without moving its boundary faces.
+ * A whole-body inward face offset can heal away usable lobes when narrow necks
+ * collapse. Subtracting boundary tools instead allows all remaining islands to
+ * survive, even when the clearance bands overlap.
+ */
+function insetEnvelope(context is Context, id is Id, extrudeId is Id,
+                       region is Query, regionPlane is Plane,
+                       reach is ValueWithUnits, clearance is ValueWithUnits)
+{
+    const bandId = id + "bands";
+    // Each side is thickened independently so nearby/opposing sides do not
+    // have to remain connected. Solid face normals point out of the envelope;
+    // thickness2 therefore builds the band into the allowed region, including
+    // outwards from the walls of holes.
+    forEachEntity(context, bandId + "sides", qNonCapEntity(extrudeId, EntityType.FACE),
+            function(side is Query, sideId is Id)
+        {
+            opThicken(context, sideId + "thicken", {
+                        "entities" : side,
+                        "thickness1" : 0 * meter,
+                        "thickness2" : clearance,
+                        "keepTools" : true
+                    });
+        });
+
+    // Side bands end at the original vertices. Circular corner tools close
+    // the gaps at concave corners and maintain clearance around hole corners.
+    const vertices = qAdjacent(region, AdjacencyType.VERTEX, EntityType.VERTEX);
+    forEachEntity(context, bandId + "corners", vertices,
+            function(vertex is Query, vertexId is Id)
+        {
+            const point = evVertexPoint(context, { "vertex" : vertex });
+            fCylinder(context, vertexId + "cylinder", {
+                        "bottomCenter" : point - regionPlane.normal * reach,
+                        "topCenter" : point + regionPlane.normal * reach,
+                        "radius" : clearance
+                    });
+        });
+
+    opBoolean(context, id + "subtractBands", {
+                "tools" : qBodyType(qCreatedBy(bandId, EntityType.BODY), BodyType.SOLID),
+                "targets" : qCreatedBy(extrudeId, EntityType.BODY),
+                "operationType" : BooleanOperationType.SUBTRACTION,
+                "keepTools" : false
+            });
+}
+
 annotation {
     "Feature Type Name" : "Vent slots",
     "Feature Type Description" : "Cut an angled array of optionally segmented slots inside a closed sketch region, or the target face when no region is selected."
@@ -320,18 +368,24 @@ export const ventSlots = defineFeature(function(context is Context, id is Id, de
         {
             try
             {
-                opOffsetFace(context, id + "insetEnvelope", {
-                            "moveFaces" : qNonCapEntity(envelopeExtrudeId, EntityType.FACE),
-                            "offsetDistance" : -definition.edgeOffset
-                        });
+                insetEnvelope(context, id + "insetEnvelope", envelopeExtrudeId,
+                        ventRegion, regionPlane, reach, definition.edgeOffset);
             }
             catch
             {
-                throw regenError("The edge offset is too large for the vent region.", {
+                throw regenError("The edge clearance could not be constructed for the vent region. Try a smaller offset.", {
                             "faultyParameters" : ["edgeOffset"],
                             "entities" : ventRegion
                         });
             }
+        }
+
+        if (isQueryEmpty(context, envelopeBodies))
+        {
+            throw regenError("The edge offset leaves no usable vent area.", {
+                        "faultyParameters" : ["edgeOffset"],
+                        "entities" : ventRegion
+                    });
         }
 
         // SUBTRACT_COMPLEMENT keeps only the portion of every slot body that lies

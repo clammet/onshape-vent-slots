@@ -24,7 +24,8 @@ rounded ventilation slots into a planar face.
 - **Gap between segments** — clear distance between adjacent pieces.
 - **Offset from edges** — erodes only the input sketch region (or target face
   boundary when no sketch is selected), maintaining the requested clearance
-  along its outer boundary and any holes. Defaults to `2 mm`.
+  along its outer boundary and any holes. Defaults to `2 mm`. If the clearance
+  splits the usable area into separate islands, slots fill all surviving islands.
 - **Offset from keep-out** — expands the selected **Bounds / keep-outs** by this
   amount, independently of the edge offset. Defaults to `2 mm`; set it to `0 mm`
   to clip directly at the keep-out boundaries.
@@ -59,14 +60,18 @@ selected region.
   curved surfaces needs a separate projection/wrapping strategy.
 - Very large arrays are rejected above 2,000 generated segments to avoid
   pathological Part Studio regeneration times.
-- An offset larger than a narrow or highly concave region can eliminate the
-  usable area; the feature reports this instead of silently making invalid cuts.
+- Edge clearance removes bands along each boundary, with round joins around
+  concave corners and hole corners. Narrow connections may disappear without
+  removing the usable areas on either side. If the offset eliminates the entire
+  usable area, the feature reports an error.
 - Keep-out regions are optional. Holes already present inside the input sketch
   region, or the target face when no sketch is selected, are naturally treated
   as region boundaries and receive **Offset from edges** clearance. Explicitly
   selected **Bounds / keep-outs** receive **Offset from keep-out** clearance.
 
-The implementation uses Onshape's documented sketch, extrusion, face-offset,
-and boolean operations. See the official [FeatureScript standard library
+The implementation uses Onshape's documented sketch, extrusion, thickening,
+face-offset, and boolean operations. See the official [FeatureScript standard library
 reference](https://cad.onshape.com/FsDoc/library.html) and [custom slot
 tutorial](https://cad.onshape.com/FsDoc/tutorials/create-a-slot-feature.html).
+
+See [the geometry regression checklist](tests/README.md) for Onshape verification.
